@@ -10,6 +10,7 @@ import binascii
 import datetime
 import sys
 import re
+import md5
 from optparse import OptionParser
 
 # ngx_http_cache.h
@@ -22,14 +23,8 @@ class ngx_cache:
   def __init__(self,data):
     self.version = struct.unpack('i',data[0:4])[0]
     if self.version == 3:
-      head               = struct.unpack('iiiIHHHB',data[4:27])
-      self.valid_sec     = head[0]
-      self.last_modified = head[1]
-      self.date          = head[2]
-      self.crc32         = head[3]
-      self.valid_msec    = head[4]
-      self.header_start  = head[5]
-      self.body_start    = head[6]
+      ( self.valid_sec,         self.last_modified,         self.date,         self.crc32,         self.valid_msec,         self.header_start ,        self.body_start ) = struct.unpack('iiiIHHHB',data[4:27])
+
       self.etag          = data[27:27+NGX_HTTP_CACHE_ETAG_LEN]
       self.vary_len      = struct.unpack('B',data[27+NGX_HTTP_CACHE_ETAG_LEN])[0]
       self.vary          = data[27+NGX_HTTP_CACHE_ETAG_LEN+1:\
@@ -45,6 +40,19 @@ class ngx_cache:
     return data[27+NGX_HTTP_CACHE_ETAG_LEN+1+NGX_HTTP_CACHE_VARY_LEN+\
                 NGX_HTTP_CACHE_KEY_LEN:][self.body_start:]
  
+
+# This function can generate cache file path 
+def ngx_generate_cache_path(key,vary,variant):
+  key_md5 = md5.new()
+  key_md5.update(key)
+  variant_md5 = md5.new()
+  variant_md5.update(key_md5.digest())
+  variant_md5.update(vary.lower())
+  variant_md5.update(':')
+  variant_md5.update(variant)
+  variant_md5.update("\r\n")
+  result = binascii.hexlify(variant_md5.digest())
+  return result[-1] + '/' + result[-3:-1] + '/' + result
 
 
 #file = open(sys.argv[1],'rb')
