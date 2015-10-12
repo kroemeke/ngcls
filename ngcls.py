@@ -24,10 +24,19 @@ class ngx_cache:
     self.version = struct.unpack('i',data[0:4])[0]
     if self.version == 3:
       self.valid_sec, self.last_modified, self.date, self.crc32, self.valid_msec,self.header_start,self.body_start = struct.unpack('iiiIHHH',data[4:26])
-      self.etag          = data[27:27+NGX_HTTP_CACHE_ETAG_LEN]
+      etag               = data[27:27+NGX_HTTP_CACHE_ETAG_LEN]
+      if etag[0] == "\x00":
+        self.etag = "none"
+      else:
+        self.etag        = etag.rstrip('\0')
       self.vary_len      = struct.unpack('B',data[27+NGX_HTTP_CACHE_ETAG_LEN])[0]
-      self.vary          = data[27+NGX_HTTP_CACHE_ETAG_LEN+1:\
+      vary               = data[27+NGX_HTTP_CACHE_ETAG_LEN+1:\
                               27+NGX_HTTP_CACHE_ETAG_LEN+1+NGX_HTTP_CACHE_VARY_LEN]
+      if vary[0] == "\x00":
+        self.vary = "none"
+      else:
+        self.vary = vary
+
       self.variant       = data[27+NGX_HTTP_CACHE_ETAG_LEN+1+NGX_HTTP_CACHE_VARY_LEN:\
                              27+NGX_HTTP_CACHE_ETAG_LEN+1+NGX_HTTP_CACHE_VARY_LEN+NGX_HTTP_CACHE_KEY_LEN]
       self.raw_response  = data[27+NGX_HTTP_CACHE_ETAG_LEN+1+NGX_HTTP_CACHE_VARY_LEN+NGX_HTTP_CACHE_KEY_LEN:]
@@ -101,6 +110,7 @@ def walk(cachedir):
       try:
         fd = open(os.path.join(path, filename),'rb')
         ngx_cache_file = ngx_cache(fd.read())
+        print  os.path.join(path, filename) + ',',
         ngx_pretty_print(ngx_cache_file,csv=True)
         #print os.path.join(path, filename) + ' ' + ngx_cache_file.key + ' variant: ' + binascii.hexlify(ngx_cache_file.variant)
       except:
