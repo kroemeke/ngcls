@@ -35,7 +35,7 @@ class ngx_cache:
       if vary[0] == "\x00":
         self.vary = "none"
       else:
-        self.vary = vary
+        self.vary = vary.rstrip('\0')
 
       self.variant       = data[27+NGX_HTTP_CACHE_ETAG_LEN+1+NGX_HTTP_CACHE_VARY_LEN:\
                              27+NGX_HTTP_CACHE_ETAG_LEN+1+NGX_HTTP_CACHE_VARY_LEN+NGX_HTTP_CACHE_KEY_LEN]
